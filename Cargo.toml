@@ -3,8 +3,13 @@ name = "performance_aware_space_shooter"
 version = "0.1.0"
 authors = ["Oskar Wistedt <oskar.wistedt@gmail.com>"]
 edition = "2021"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sdl2 =  "0.35"
+rand = "*"
+
+[dependencies.sdl2]
+version = "0.35.2"
+features = ["image","ttf"]
