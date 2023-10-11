@@ -9,6 +9,9 @@ build = "build.rs"
 
 [dependencies]
 rand = "*"
+vector2d = "*"
+specs = "0.20.0"
+specs-derive = "0.4.1"
 
 [dependencies.sdl2]
 version = "0.35.2"
