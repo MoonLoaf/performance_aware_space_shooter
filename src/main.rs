@@ -6,7 +6,7 @@ use sdl2::render::{WindowCanvas, TextureCreator, Texture};
 use sdl2::video::WindowContext;
 use sdl2::image::{self, InitFlag, LoadTexture};
 
-use specs::{World, WorldExt, Join};
+use specs::{World, WorldExt, Join, Dispatcher, DispatcherBuilder};
 
 use std::path::Path;
 use std::collections::HashMap;
@@ -17,9 +17,10 @@ use rand::*;
 pub mod key_manager;
 pub mod components;
 pub mod game;
+pub mod asteroid;
 
-const SCREEN_WIDTH: i32 = 1280;
-const SCREEN_HEIGHT: i32 = 720;
+const SCREEN_WIDTH: u32 = 1280;
+const SCREEN_HEIGHT: u32 = 720;
 
 struct State { ecs: World }
 
@@ -49,12 +50,23 @@ fn main() -> Result<(), String> {
     game_state.ecs.register::<components::Position>();
     game_state.ecs.register::<components::Renderable>();
     game_state.ecs.register::<components::Player>();
+    game_state.ecs.register::<components::Asteroid>();
+
+    let mut dispatcher = DispatcherBuilder::new()
+        .with(asteroid::AsteroidMover, "asteroid_mover", &[])
+        .build();
+
+    let textures = [
+        //Character texture
+        texture_creator.load_texture("Assets/Images/rocket.png")?,
+        //Asteroid textures
+        texture_creator.load_texture("Assets/Images/asteroid_1.png")?,
+        texture_creator.load_texture("Assets/Images/asteroid_2.png")?,
+        texture_creator.load_texture("Assets/Images/asteroid_3.png")?
+    ];
 
     game::load_world(&mut game_state.ecs);
 
-    //Character
-    let spaceship_texture = texture_creator.load_texture("Assets/Images/rocket.png")?;
-    
     'running:loop {
         for event in event_pump.poll_iter() {
 
@@ -87,7 +99,8 @@ fn main() -> Result<(), String> {
             }
         }
         game::update(&mut game_state.ecs, &mut key_manager);
-        render(&mut canvas, &texture_creator, &font, &spaceship_texture, &game_state.ecs)?;
+        dispatcher.dispatch(&game_state.ecs);
+        render(&mut canvas, &texture_creator, &font, &textures, &game_state.ecs)?;
         
         //Cap the event pump loop to run 60 times per second
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32/60));
@@ -95,7 +108,7 @@ fn main() -> Result<(), String> {
     return Ok(())
 }
 
-fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, font: &sdl2::ttf::Font, texture: &Texture, ecs: &World) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, font: &sdl2::ttf::Font, textures: &[Texture], ecs: &World) -> Result<(), String> {
 
     let color = Color::RGB(0,0,0);
     canvas.set_draw_color(color);
@@ -104,7 +117,7 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
     let positions = ecs.read_storage::<components::Position>();
     let renderables = ecs.read_storage::<components::Renderable>();
 
-    for (renderable, pos) in (&renderables, &positions).join() {
+    for (mut renderable, pos) in (&renderables, &positions).join() {
 
         let src = Rect::new(0, 0, renderable.img_width, renderable.img_height);
         let x: i32 = pos.x as i32;
@@ -113,11 +126,12 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         let dest = Rect::new(x - ((renderable.output_width / 2) as i32), y - ((renderable.output_height / 2) as i32), renderable.output_width, renderable.output_height);
         let center = Point::new((renderable.output_width / 2) as i32, (renderable.output_height / 2) as i32);
 
+        let texture= texture_creator.load_texture(&renderable.texture_name)?;
         canvas.copy_ex(
             &texture,
             src,
             dest,
-            pos.rot,
+            renderable.img_rotation,
             center,
             false,
             false

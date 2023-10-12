@@ -27,3 +27,10 @@ pub struct Player {
     pub max_speed: f64,
     pub friction: f64
 }
+
+#[derive(Component)]
+pub struct Asteroid {
+    pub rotation_speed: f64,
+    pub speed: f64,
+    pub friction: f64
+}
