@@ -77,9 +77,8 @@ fn main() -> Result<(), String> {
         .with(asteroid::AsteroidMover, "asteroid_mover", &[])
         .with(asteroid::AsteroidCollider, "asteroid_collider", &[])
         .with(laser::LaserMovement, "laser_movement", &[])
+        .with(laser::LaserDamage, "laser_damage", &[])
         .build();
-
-
 
     game::load_world(&mut game_state.ecs);
 
@@ -152,7 +151,7 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         let dest = Rect::new(x - ((renderable.output_width / 2) as i32), y - ((renderable.output_height / 2) as i32), renderable.output_width, renderable.output_height);
         let center = Point::new((renderable.output_width / 2) as i32, (renderable.output_height / 2) as i32);
 
-        let texture = texture_manager::TextureManager::get_texture(texture_manager, &renderable.texture_name).ok_or("Texture not found".to_string())?;
+        let texture = texture_manager.get_texture(&renderable.texture_name).ok_or("Texture not found")?;
         canvas.copy_ex(
             &texture,
             src,

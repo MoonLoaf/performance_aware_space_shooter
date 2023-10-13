@@ -69,7 +69,7 @@ impl<'a> System<'a> for AsteroidCollider {
                 if hypotenuse < (asteroid_renderable.output_width + player_renderable.output_width) as f64 / 2.0 {
                     eprintln!("Collision");
                     //TODO pooling?
-                    entities.delete(entity);
+                    entities.delete(entity).ok();
                 }
             }
         }

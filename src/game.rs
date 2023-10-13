@@ -2,19 +2,46 @@ use std::collections::HashMap;
 use specs::{World, WorldExt, Builder, Join};
 use vector2d::Vector2D;
 use rand::Rng;
-use sdl2::libc::{commit, rewind};
 
 use crate::components;
-use crate::components::Laser;
 use crate::key_manager;
+
+const SPAWN_DISTANCE: f64 = 400.0;
 
 pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
 
     reload_world_if_no_players(ecs);
 
+    let mut current_player_pos = components::Position { x: 0.0, y: 0.0, rot: 0.0 };
+    {
+        let players = ecs.read_storage::<crate::components::Player>();
+        let positions = ecs.read_storage::<crate::components::Position>();
+
+        for (pos, player) in (&positions, &players).join() {
+            current_player_pos.x = pos.x;
+            current_player_pos.y = pos.y;
+        }
+    }
 
     let mut player_pos = components::Position { x: 0.0, y: 0.0, rot: 0.0 };
     let mut should_fire_laser = false;
+    let mut should_create_asteroid = false;
+    {
+        let asteroids = ecs.read_storage::<crate::components::Asteroid>();
+        if asteroids.join().count() < 1 {
+            should_create_asteroid = true;
+        }
+    }
+
+    if should_create_asteroid {
+        let spawn_position = generate_spawn_position(&current_player_pos);
+
+        let asteroid_speed = rand::thread_rng().gen_range(1.0..6.0);
+        let asteroid_rotation_speed = rand::thread_rng().gen_range(1.0..5.0);
+        let asteroid_size = rand::thread_rng().gen_range(40..110);
+
+        create_asteroid(ecs, spawn_position, asteroid_size, asteroid_rotation_speed, asteroid_rotation_speed);
+    }
 
     {
         let mut positions = ecs.write_storage::<crate::components::Position>();
@@ -99,18 +126,18 @@ pub fn load_world( ecs: &mut World) {
         .with(crate::components::Position { x: 350.0, y: 250.0, rot: 0.0 })
         .with(crate::components::Renderable {
             texture_name: String::from("Assets/Images/rocket.png"),
-            img_width: 561,
-            img_height: 644,
-            output_width: 100,
-            output_height: 140,
+            img_width: 276,
+            img_height: 364,
+            output_width: 60,
+            output_height: 80,
             img_rotation: 0.0
         })
         .with(crate::components::Player {
             impulse: vector2d::Vector2D::new(0.0,0.0,),
             current_speed: vector2d::Vector2D::new(0.0,0.0,),
             rotation_speed: 3.0,
-            max_speed: 4.5,
-            friction: 7.0
+            max_speed: 4.0,
+            friction: 5.0
         })
     .build();
     //Asteroid
@@ -118,8 +145,8 @@ pub fn load_world( ecs: &mut World) {
         .with(crate::components::Position { x: 500.0, y: 235.0, rot: 45.0 })
         .with(crate::components::Renderable {
             texture_name: String::from(get_random_asteroid_texture_name()),
-            img_width: 518,
-            img_height: 517,
+            img_width: 215,
+            img_height: 215,
             output_width: 100,
             output_height: 100,
             img_rotation: 0.0
@@ -132,7 +159,7 @@ pub fn load_world( ecs: &mut World) {
     .build();
 }
 
-const MAX_LASERS: usize = 5;
+const MAX_LASERS: usize = 7;
 fn fire_laser(ecs: &mut World, player_position: components::Position) {
     {
         let lasers = ecs.read_storage::<components::Laser>();
@@ -144,21 +171,57 @@ fn fire_laser(ecs: &mut World, player_position: components::Position) {
         .with(player_position)
         .with(components::Renderable {
             texture_name: String::from("Assets/Images/laser.png"),
-            img_width: 605,
-            img_height: 751,
-            output_width: 60,
-            output_height: 110,
+            img_width: 64,
+            img_height: 153,
+            output_width: 20,
+            output_height: 50,
             img_rotation: 0.0
          })
         .with(components::Laser {
-            speed: 8.0
+            speed: 10.0
     })
     .build();
 }
 
+fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_size: u32, asteroid_speed: f64, asteroid_rotation_speed: f64){
+    ecs.create_entity()
+        .with(position)
+        .with(crate::components::Renderable {
+            texture_name: String::from(get_random_asteroid_texture_name()),
+            img_width: 215,
+            img_height: 215,
+            output_width: asteroid_size,
+            output_height: asteroid_size,
+            img_rotation: 0.0
+        })
+        .with(crate::components::Asteroid{
+            rotation_speed: asteroid_rotation_speed,
+            speed: asteroid_speed,
+            friction: 7.0
+        })
+    .build();
+}
+
+fn generate_spawn_position(player_pos: &components::Position) -> components::Position {
+    let angle = rand::random::<f64>() * 2.0 * std::f64::consts::PI;
+    let spawn_x = player_pos.x + (angle.cos() * SPAWN_DISTANCE);
+    let spawn_y = player_pos.y + (angle.sin() * SPAWN_DISTANCE);
+
+    // Generate random rotation in degrees
+    let random_rotation = rand::thread_rng().gen_range(0.0..360.0);
+
+    // Clamp within screen bounds
+    let clamped_x = spawn_x.max(0.0).min(crate::SCREEN_WIDTH as f64);
+    let clamped_y = spawn_y.max(0.0).min(crate::SCREEN_HEIGHT as f64);
+
+    components::Position {
+        x: clamped_x,
+        y: clamped_y,
+        rot: random_rotation
+    }
+}
 fn get_random_asteroid_texture_name() -> String {
-    //TODO change to 1..=3 when asteroids have correct resolution
-    let random_number = rand::thread_rng().gen_range(2..=3);
+    let random_number = rand::thread_rng().gen_range(1..=3);
     format!("Assets/Images/asteroid_{}.png", random_number)
 }
 

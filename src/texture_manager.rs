@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use sdl2::render::{WindowCanvas, TextureCreator, Texture};
+use sdl2::render::{Texture};
 
 pub struct TextureManager<'r> {
     textures: HashMap<String, &'r Texture<'r>>,
