@@ -14,12 +14,14 @@ use std::time::Duration;
 
 use rand::*;
 
+use texture_manager::TextureManager;
+
 pub mod key_manager;
 pub mod components;
 pub mod game;
 pub mod asteroid;
 pub mod laser;
-mod texture_manager;
+pub mod texture_manager;
 
 const SCREEN_WIDTH: u32 = 1280;
 const SCREEN_HEIGHT: u32 = 720;
@@ -40,6 +42,22 @@ fn main() -> Result<(), String> {
 
     let mut canvas = window.into_canvas().build().expect("init canvas failed");
     let texture_creator = canvas.texture_creator();
+
+    //Character texture
+    let rocket_tex = texture_creator.load_texture("Assets/Images/rocket.png")?;
+    let laser_tex = texture_creator.load_texture("Assets/Images/laser.png")?;
+    //Asteroid textures
+    let asteroid_1_tex = texture_creator.load_texture("Assets/Images/asteroid_1.png")?;
+    let asteroid_2_tex = texture_creator.load_texture("Assets/Images/asteroid_2.png")?;
+    let asteroid_3_tex = texture_creator.load_texture("Assets/Images/asteroid_3.png")?;
+
+    let mut texture_manager = TextureManager::new();
+    texture_manager.add_texture("Assets/Images/rocket.png".to_string(), &rocket_tex);
+    texture_manager.add_texture("Assets/Images/asteroid_1.png".to_string(), &asteroid_1_tex);
+    texture_manager.add_texture("Assets/Images/asteroid_2.png".to_string(), &asteroid_2_tex);
+    texture_manager.add_texture("Assets/Images/asteroid_3.png".to_string(), &asteroid_3_tex);
+    texture_manager.add_texture("Assets/Images/laser.png".to_string(), &laser_tex);
+
     
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let font = ttf_context.load_font(&"Assets/Fonts/Orbitron-Regular.ttf", 100)?;
@@ -61,15 +79,7 @@ fn main() -> Result<(), String> {
         .with(laser::LaserMovement, "laser_movement", &[])
         .build();
 
-    //Don't need these for now if I create references within the render function
-    //let textures = [
-    //    //Character texture
-    //    texture_creator.load_texture("Assets/Images/rocket.png")?,
-    //    //Asteroid textures
-    //    texture_creator.load_texture("Assets/Images/asteroid_1.png")?,
-    //    texture_creator.load_texture("Assets/Images/asteroid_2.png")?,
-    //    texture_creator.load_texture("Assets/Images/asteroid_3.png")?
-    //];
+
 
     game::load_world(&mut game_state.ecs);
 
@@ -114,7 +124,7 @@ fn main() -> Result<(), String> {
         game::update(&mut game_state.ecs, &mut key_manager);
         dispatcher.dispatch(&game_state.ecs);
         game_state.ecs.maintain();
-        render(&mut canvas, &texture_creator, &font, &game_state.ecs)?;
+        render(&mut canvas, &texture_creator, &mut texture_manager, &font, &game_state.ecs)?;
         
         //Cap the event pump loop to run 60 times per second
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32/60));
@@ -122,7 +132,7 @@ fn main() -> Result<(), String> {
     return Ok(())
 }
 
-fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, font: &sdl2::ttf::Font, ecs: &World) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, texture_manager: &mut TextureManager, font: &sdl2::ttf::Font, ecs: &World) -> Result<(), String> {
 
     let color = Color::RGB(0,0,0);
     canvas.set_draw_color(color);
@@ -142,8 +152,7 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         let dest = Rect::new(x - ((renderable.output_width / 2) as i32), y - ((renderable.output_height / 2) as i32), renderable.output_width, renderable.output_height);
         let center = Point::new((renderable.output_width / 2) as i32, (renderable.output_height / 2) as i32);
 
-        //TODO is loading a texture each iteration heavy? cache each texture somehow?
-        let texture = texture_creator.load_texture(&renderable.texture_name)?;
+        let texture = texture_manager::TextureManager::get_texture(texture_manager, &renderable.texture_name).ok_or("Texture not found".to_string())?;
         canvas.copy_ex(
             &texture,
             src,
