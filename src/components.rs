@@ -34,3 +34,8 @@ pub struct Asteroid {
     pub speed: f64,
     pub friction: f64
 }
+
+#[derive(Component)]
+pub struct Laser {
+    pub speed: f64,
+}

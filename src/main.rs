@@ -18,6 +18,8 @@ pub mod key_manager;
 pub mod components;
 pub mod game;
 pub mod asteroid;
+pub mod laser;
+mod texture_manager;
 
 const SCREEN_WIDTH: u32 = 1280;
 const SCREEN_HEIGHT: u32 = 720;
@@ -51,19 +53,23 @@ fn main() -> Result<(), String> {
     game_state.ecs.register::<components::Renderable>();
     game_state.ecs.register::<components::Player>();
     game_state.ecs.register::<components::Asteroid>();
+    game_state.ecs.register::<components::Laser>();
 
     let mut dispatcher = DispatcherBuilder::new()
         .with(asteroid::AsteroidMover, "asteroid_mover", &[])
+        .with(asteroid::AsteroidCollider, "asteroid_collider", &[])
+        .with(laser::LaserMovement, "laser_movement", &[])
         .build();
 
-    let textures = [
-        //Character texture
-        texture_creator.load_texture("Assets/Images/rocket.png")?,
-        //Asteroid textures
-        texture_creator.load_texture("Assets/Images/asteroid_1.png")?,
-        texture_creator.load_texture("Assets/Images/asteroid_2.png")?,
-        texture_creator.load_texture("Assets/Images/asteroid_3.png")?
-    ];
+    //Don't need these for now if I create references within the render function
+    //let textures = [
+    //    //Character texture
+    //    texture_creator.load_texture("Assets/Images/rocket.png")?,
+    //    //Asteroid textures
+    //    texture_creator.load_texture("Assets/Images/asteroid_1.png")?,
+    //    texture_creator.load_texture("Assets/Images/asteroid_2.png")?,
+    //    texture_creator.load_texture("Assets/Images/asteroid_3.png")?
+    //];
 
     game::load_world(&mut game_state.ecs);
 
@@ -77,6 +83,13 @@ fn main() -> Result<(), String> {
                 },
                 Event::KeyDown {keycode: Some(Keycode::Escape), .. } => {
                     break 'running;
+                },
+                //Shooting
+                Event::KeyDown {keycode: Some(Keycode::Space), .. } => {
+                    key_manager::key_down(&mut key_manager, " ".to_string())
+                },
+                Event::KeyUp {keycode: Some(Keycode::Space), .. } => {
+                    key_manager::key_up(&mut key_manager, " ".to_string())
                 },
                 //Keyboard events sent to key_manager
                 Event::KeyDown {keycode, ..} => {
@@ -100,7 +113,8 @@ fn main() -> Result<(), String> {
         }
         game::update(&mut game_state.ecs, &mut key_manager);
         dispatcher.dispatch(&game_state.ecs);
-        render(&mut canvas, &texture_creator, &font, &textures, &game_state.ecs)?;
+        game_state.ecs.maintain();
+        render(&mut canvas, &texture_creator, &font, &game_state.ecs)?;
         
         //Cap the event pump loop to run 60 times per second
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32/60));
@@ -108,7 +122,7 @@ fn main() -> Result<(), String> {
     return Ok(())
 }
 
-fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, font: &sdl2::ttf::Font, textures: &[Texture], ecs: &World) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, font: &sdl2::ttf::Font, ecs: &World) -> Result<(), String> {
 
     let color = Color::RGB(0,0,0);
     canvas.set_draw_color(color);
@@ -119,6 +133,8 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
 
     for (mut renderable, pos) in (&renderables, &positions).join() {
 
+        //TODO clean up amount of new variable declarations for each iteration of render()?
+
         let src = Rect::new(0, 0, renderable.img_width, renderable.img_height);
         let x: i32 = pos.x as i32;
         let y: i32 = pos.y as i32;
@@ -126,7 +142,8 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         let dest = Rect::new(x - ((renderable.output_width / 2) as i32), y - ((renderable.output_height / 2) as i32), renderable.output_width, renderable.output_height);
         let center = Point::new((renderable.output_width / 2) as i32, (renderable.output_height / 2) as i32);
 
-        let texture= texture_creator.load_texture(&renderable.texture_name)?;
+        //TODO is loading a texture each iteration heavy? cache each texture somehow?
+        let texture = texture_creator.load_texture(&renderable.texture_name)?;
         canvas.copy_ex(
             &texture,
             src,
