@@ -4,11 +4,11 @@ use vector2d::Vector2D;
 use rand::Rng;
 
 use crate::components;
-use crate::key_manager;
+use crate::input_manager;
 
 const SPAWN_DISTANCE: f64 = 400.0;
 
-pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
+pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>) {
 
     reload_world_if_no_players(ecs);
 
@@ -49,15 +49,15 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
         let mut renderables = ecs.write_storage::<crate::components::Renderable>();
 
         for (player, pos, renderable) in (&mut player, &mut positions, &mut renderables).join() {
-            if crate::key_manager::is_key_pressed(&key_manager, "D") {
+            if crate::input_manager::is_key_pressed(&input_manager, "D") {
                 pos.rot += player.rotation_speed;
             }
-            if crate::key_manager::is_key_pressed(&key_manager, "A") {
+            if crate::input_manager::is_key_pressed(&input_manager, "A") {
                 pos.rot -= player.rotation_speed;
             }
 
             update_movement(pos, player);
-            if crate::key_manager::is_key_pressed(&key_manager, "W") {
+            if crate::input_manager::is_key_pressed(&input_manager, "W") {
                 let radians = pos.rot.to_radians();
 
                 let move_vec = Vector2D::<f64>::new(player.max_speed * radians.sin(),
@@ -88,8 +88,8 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
                 pos.y += crate::SCREEN_HEIGHT as f64;
             }
 
-            if key_manager::is_key_pressed(&key_manager, " ") {
-                key_manager::key_up(key_manager, " ".to_string());
+            if input_manager::is_key_pressed(&input_manager, " ") {
+                input_manager::key_up(input_manager, " ".to_string());
                 should_fire_laser = true;
                 player_pos.x = pos.x;
                 player_pos.y = pos.y;
@@ -184,8 +184,18 @@ fn fire_laser(ecs: &mut World, player_position: components::Position) {
 }
 
 fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_size: u32, asteroid_speed: f64, asteroid_rotation_speed: f64){
+    let half_size = asteroid_size as f64 / 2.0;
+
+    // Calculate adjusted position to keep the entire asteroid within the screen bounds
+    let adjusted_x = position.x.max(half_size).min(crate::SCREEN_WIDTH as f64 - half_size);
+    let adjusted_y = position.y.max(half_size).min(crate::SCREEN_HEIGHT as f64 - half_size);
+
     ecs.create_entity()
-        .with(position)
+        .with(components::Position {
+            x: adjusted_x,
+            y: adjusted_y,
+            rot: position.rot,
+        })
         .with(crate::components::Renderable {
             texture_name: String::from(get_random_asteroid_texture_name()),
             img_width: 215,
@@ -203,11 +213,35 @@ fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_siz
 }
 
 fn generate_spawn_position(player_pos: &components::Position) -> components::Position {
-    let angle = rand::random::<f64>() * 2.0 * std::f64::consts::PI;
-    let spawn_x = player_pos.x + (angle.cos() * SPAWN_DISTANCE);
-    let spawn_y = player_pos.y + (angle.sin() * SPAWN_DISTANCE);
+    let player_quadrant = determine_quadrant(player_pos);
 
-    // Generate random rotation in degrees
+    // Determine quadrant furthest away
+    let asteroid_spawn_quadrant = match player_quadrant {
+        Quadrant::TopLeft => Quadrant::BottomRight,
+        Quadrant::TopRight => Quadrant::BottomLeft,
+        Quadrant::BottomLeft => Quadrant::TopRight,
+        Quadrant::BottomRight => Quadrant::TopLeft,
+    };
+
+    let (spawn_x, spawn_y) = match asteroid_spawn_quadrant {
+        Quadrant::TopLeft => (
+            rand::thread_rng().gen_range(0.0..player_pos.x),
+            rand::thread_rng().gen_range(0.0..player_pos.y),
+        ),
+        Quadrant::TopRight => (
+            rand::thread_rng().gen_range(player_pos.x..crate::SCREEN_WIDTH as f64),
+            rand::thread_rng().gen_range(0.0..player_pos.y),
+        ),
+        Quadrant::BottomLeft => (
+            rand::thread_rng().gen_range(0.0..player_pos.x),
+            rand::thread_rng().gen_range(player_pos.y..crate::SCREEN_HEIGHT as f64),
+        ),
+        Quadrant::BottomRight => (
+            rand::thread_rng().gen_range(player_pos.x..crate::SCREEN_WIDTH as f64),
+            rand::thread_rng().gen_range(player_pos.y..crate::SCREEN_HEIGHT as f64),
+        ),
+    };
+
     let random_rotation = rand::thread_rng().gen_range(0.0..360.0);
 
     // Clamp within screen bounds
@@ -217,9 +251,37 @@ fn generate_spawn_position(player_pos: &components::Position) -> components::Pos
     components::Position {
         x: clamped_x,
         y: clamped_y,
-        rot: random_rotation
+        rot: random_rotation,
     }
 }
+
+#[derive(PartialEq)]
+enum Quadrant {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+fn determine_quadrant(pos: &components::Position) -> Quadrant {
+    if pos.x < crate::SCREEN_WIDTH as f64 / 2.0 {
+        if pos.y < crate::SCREEN_HEIGHT as f64 / 2.0 {
+            println!("player is topleft");
+            Quadrant::TopLeft
+        } else {
+            println!("player is botleft");
+            Quadrant::BottomLeft
+        }
+    } else {
+        if pos.y < crate::SCREEN_HEIGHT as f64 / 2.0 {
+            println!("player is topRight");
+            Quadrant::TopRight
+        } else {
+            println!("player is BotRight");
+            Quadrant::BottomRight
+        }
+    }
+}
+
 fn get_random_asteroid_texture_name() -> String {
     let random_number = rand::thread_rng().gen_range(1..=3);
     format!("Assets/Images/asteroid_{}.png", random_number)

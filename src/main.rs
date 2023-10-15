@@ -16,7 +16,7 @@ use rand::*;
 
 use texture_manager::TextureManager;
 
-pub mod key_manager;
+pub mod input_manager;
 pub mod components;
 pub mod game;
 pub mod asteroid;
@@ -63,7 +63,7 @@ fn main() -> Result<(), String> {
     let font = ttf_context.load_font(&"Assets/Fonts/Orbitron-Regular.ttf", 100)?;
     
     let mut event_pump = sdl_context.event_pump()?;
-    let mut key_manager: HashMap<String, bool> = HashMap::new();
+    let mut input_manager: HashMap<String, bool> = HashMap::new();
 
     //ecs component registration
     let mut game_state = State { ecs: World::new() };
@@ -95,17 +95,17 @@ fn main() -> Result<(), String> {
                 },
                 //Shooting
                 Event::KeyDown {keycode: Some(Keycode::Space), .. } => {
-                    key_manager::key_down(&mut key_manager, " ".to_string())
+                    input_manager::key_down(&mut input_manager, " ".to_string())
                 },
                 Event::KeyUp {keycode: Some(Keycode::Space), .. } => {
-                    key_manager::key_up(&mut key_manager, " ".to_string())
+                    input_manager::key_up(&mut input_manager, " ".to_string())
                 },
-                //Keyboard events sent to key_manager
+                //Keyboard events sent to input_manager
                 Event::KeyDown {keycode, ..} => {
                     match keycode {
                         None => {},
                         Some(key) => {
-                            key_manager::key_down(&mut key_manager, key.to_string())
+                            input_manager::key_down(&mut input_manager, key.to_string())
                         }
                     }
                 },
@@ -113,14 +113,14 @@ fn main() -> Result<(), String> {
                     match keycode {
                         None => {},
                         Some(key) => {
-                            key_manager::key_up(&mut key_manager, key.to_string())
+                            input_manager::key_up(&mut input_manager, key.to_string())
                         }
                     }
                 }
                 _ => {}
             }
         }
-        game::update(&mut game_state.ecs, &mut key_manager);
+        game::update(&mut game_state.ecs, &mut input_manager);
         dispatcher.dispatch(&game_state.ecs);
         game_state.ecs.maintain();
         render(&mut canvas, &texture_creator, &mut texture_manager, &font, &game_state.ecs)?;
