@@ -1,7 +1,7 @@
 use specs::prelude::*;
 use specs::{Entities, Join};
 
-use crate::{components, render};
+use crate::{components};
 
 pub struct LaserMovement;
 
@@ -38,11 +38,13 @@ impl<'a> System<'a> for LaserDamage {
         WriteStorage<'a, components::Renderable>,
         WriteStorage<'a, components::Laser>,
         WriteStorage<'a, components::Asteroid>,
-        WriteStorage<'a, components::Player>,
+        WriteStorage<'a, components::GameData>,
         Entities<'a>
     );
     fn run (&mut self, data: Self::SystemData) {
-        let (positions, renderables, lasers, asteroids, player, entities) = &data;
+        let (positions, renderables, lasers, asteroids, _ ,  entities) = &data;
+
+        let mut should_add_score = false;
 
         for (laser_pos,_ ,_, laser_entity) in (positions, renderables, lasers, entities).join() {
             for (asteroid_pos, asteroid_renderable, _, asteroid_entity) in (positions, renderables, asteroids, entities).join() {
@@ -55,10 +57,15 @@ impl<'a> System<'a> for LaserDamage {
                     //TODO more pooling?
                     entities.delete(laser_entity).ok();
                     entities.delete(asteroid_entity).ok();
+                    should_add_score = true;
                 }
             }
-
-
+        }
+        if should_add_score {
+            let (_, _, _, _, mut gamedatas, _) = data;
+            for gamedata in (&mut gamedatas).join() {
+                gamedata.score += 10;
+            }
         }
     }
 }

@@ -39,3 +39,9 @@ pub struct Asteroid {
 pub struct Laser {
     pub speed: f64,
 }
+
+#[derive(Component)]
+pub struct GameData {
+    pub score: u32,
+    pub level: u32
+}

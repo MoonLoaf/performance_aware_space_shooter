@@ -6,8 +6,6 @@ use rand::Rng;
 use crate::components;
 use crate::input_manager;
 
-const SPAWN_DISTANCE: f64 = 400.0;
-
 pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>) {
 
     reload_world_if_no_players(ecs);
@@ -17,7 +15,7 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>) {
         let players = ecs.read_storage::<crate::components::Player>();
         let positions = ecs.read_storage::<crate::components::Position>();
 
-        for (pos, player) in (&positions, &players).join() {
+        for (pos, _) in (&positions, &players).join() {
             current_player_pos.x = pos.x;
             current_player_pos.y = pos.y;
         }
@@ -34,13 +32,30 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>) {
     }
 
     if should_create_asteroid {
-        let spawn_position = generate_spawn_position(&current_player_pos);
+        {
+            let mut game_data = ecs.write_storage::<components::GameData>();
+            for gamedata in (&mut game_data).join() {
+                gamedata.level += 1;
+            }
+        }
 
-        let asteroid_speed = rand::thread_rng().gen_range(1.0..6.0);
-        let asteroid_rotation_speed = rand::thread_rng().gen_range(1.0..5.0);
-        let asteroid_size = rand::thread_rng().gen_range(40..110);
+        let amount_to_spawn: u32 = {
+            let game_data = ecs.read_storage::<components::GameData>();
+            let mut amount = 0;
+            for gamedata in (&game_data).join() {
+                amount = gamedata.level * 2;
+            }
+            amount
+        };
 
-        create_asteroid(ecs, spawn_position, asteroid_size, asteroid_rotation_speed, asteroid_rotation_speed);
+        for _ in 0..amount_to_spawn {
+            let spawn_position = generate_spawn_position(&current_player_pos);
+            let asteroid_speed = rand::thread_rng().gen_range(1.0..6.0);
+            let asteroid_rotation_speed = rand::thread_rng().gen_range(1.0..5.0);
+            let asteroid_size = rand::thread_rng().gen_range(40..110);
+
+            create_asteroid(ecs, spawn_position, asteroid_size, asteroid_speed, asteroid_rotation_speed);
+        }
     }
 
     {
@@ -157,6 +172,10 @@ pub fn load_world( ecs: &mut World) {
             friction: 7.0
         })
     .build();
+
+    ecs.create_entity()
+        .with(components::GameData{score: 0, level: 1})
+    .build();
 }
 
 const MAX_LASERS: usize = 7;
@@ -265,18 +284,18 @@ enum Quadrant {
 fn determine_quadrant(pos: &components::Position) -> Quadrant {
     if pos.x < crate::SCREEN_WIDTH as f64 / 2.0 {
         if pos.y < crate::SCREEN_HEIGHT as f64 / 2.0 {
-            println!("player is topleft");
+            //println!("Player is Top left");
             Quadrant::TopLeft
         } else {
-            println!("player is botleft");
+            println!("Player is Bot left");
             Quadrant::BottomLeft
         }
     } else {
         if pos.y < crate::SCREEN_HEIGHT as f64 / 2.0 {
-            println!("player is topRight");
+            //println!("Player is Top Right");
             Quadrant::TopRight
         } else {
-            println!("player is BotRight");
+            //println!("Player is Bot Right");
             Quadrant::BottomRight
         }
     }

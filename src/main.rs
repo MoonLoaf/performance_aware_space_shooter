@@ -2,17 +2,14 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-use sdl2::render::{WindowCanvas, TextureCreator, Texture};
+use sdl2::render::{WindowCanvas, TextureCreator};
 use sdl2::video::WindowContext;
-use sdl2::image::{self, InitFlag, LoadTexture};
+use sdl2::image::{InitFlag, LoadTexture};
 
-use specs::{World, WorldExt, Join, Dispatcher, DispatcherBuilder};
+use specs::{World, WorldExt, Join, DispatcherBuilder};
 
-use std::path::Path;
 use std::collections::HashMap;
 use std::time::Duration;
-
-use rand::*;
 
 use texture_manager::TextureManager;
 
@@ -23,19 +20,19 @@ pub mod asteroid;
 pub mod laser;
 pub mod texture_manager;
 
-const SCREEN_WIDTH: u32 = 1280;
-const SCREEN_HEIGHT: u32 = 720;
+const SCREEN_WIDTH: u32 = 1920;
+const SCREEN_HEIGHT: u32 = 1080;
 
 struct State { ecs: World }
 
 fn main() -> Result<(), String> {
-    println!("Starting");
+    //println!("Starting");
     
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
 
-    let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1280, 720)
+    let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1920, 1080)
     .position_centered()
         .build()
         .expect("Could not init video subsystem");
@@ -43,7 +40,8 @@ fn main() -> Result<(), String> {
     let mut canvas = window.into_canvas().build().expect("init canvas failed");
     let texture_creator = canvas.texture_creator();
 
-    //Character texture
+    //TODO Could make texture manager take care of creating and adding to collection at the same time
+    //Character textures
     let rocket_tex = texture_creator.load_texture("Assets/Images/rocket.png")?;
     let laser_tex = texture_creator.load_texture("Assets/Images/laser.png")?;
     //Asteroid textures
@@ -51,6 +49,7 @@ fn main() -> Result<(), String> {
     let asteroid_2_tex = texture_creator.load_texture("Assets/Images/asteroid_2.png")?;
     let asteroid_3_tex = texture_creator.load_texture("Assets/Images/asteroid_3.png")?;
 
+    //Add these to texture manager
     let mut texture_manager = TextureManager::new();
     texture_manager.add_texture("Assets/Images/rocket.png".to_string(), &rocket_tex);
     texture_manager.add_texture("Assets/Images/asteroid_1.png".to_string(), &asteroid_1_tex);
@@ -72,6 +71,7 @@ fn main() -> Result<(), String> {
     game_state.ecs.register::<components::Player>();
     game_state.ecs.register::<components::Asteroid>();
     game_state.ecs.register::<components::Laser>();
+    game_state.ecs.register::<components::GameData>();
 
     let mut dispatcher = DispatcherBuilder::new()
         .with(asteroid::AsteroidMover, "asteroid_mover", &[])
@@ -140,7 +140,7 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
     let positions = ecs.read_storage::<components::Position>();
     let renderables = ecs.read_storage::<components::Renderable>();
 
-    for (mut renderable, pos) in (&renderables, &positions).join() {
+    for (renderable, pos) in (&renderables, &positions).join() {
 
         //TODO clean up amount of new variable declarations for each iteration of render()?
 
@@ -161,6 +161,27 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
             false,
             false
         )?;
+    }
+
+    let game_data = ecs.read_storage::<components::GameData>();
+    for game_data in game_data.join() {
+        //Score
+        let score = "Score: ".to_string() + &game_data.score.to_string();
+
+        let surface = font.render(&score).solid(Color::RGB(255,255,255)).map_err(|e|e.to_string())?;
+        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+
+        let target = Rect::new(10i32, 0i32, 100u32, 50u32);
+        canvas.copy(&surface_texture, None, Some(target))?;
+
+        //Level
+        let level = "Level: ".to_string() + &game_data.level.to_string();
+
+        let surface = font.render(&level).solid(Color::RGB(255,255,255)).map_err(|e|e.to_string())?;
+        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+
+        let target = Rect::new((crate::SCREEN_WIDTH-110) as i32, 0i32, 100u32, 50u32);
+        canvas.copy(&surface_texture, None, Some(target))?;
     }
 
     canvas.present();

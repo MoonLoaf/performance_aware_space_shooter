@@ -1,7 +1,7 @@
 use specs::{System, WriteStorage, Join};
 use specs::prelude::Entities;
 
-use crate::{components, render};
+use crate::{components};
 pub struct AsteroidMover;
 
 pub struct AsteroidCollider;
@@ -67,7 +67,7 @@ impl<'a> System<'a> for AsteroidCollider {
                 let hypotenuse: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
 
                 if hypotenuse < (asteroid_renderable.output_width + player_renderable.output_width) as f64 / 2.0 {
-                    eprintln!("Collision");
+                    //println!("Collision");
                     //TODO pooling?
                     entities.delete(entity).ok();
                 }
