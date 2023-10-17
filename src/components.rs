@@ -25,7 +25,8 @@ pub struct Player {
     pub current_speed: Vector2D<f64>,
     pub rotation_speed: f64,
     pub max_speed: f64,
-    pub friction: f64
+    pub friction: f64,
+    pub health: i32
 }
 
 #[derive(Component)]

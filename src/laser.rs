@@ -64,7 +64,7 @@ impl<'a> System<'a> for LaserDamage {
         if should_add_score {
             let (_, _, _, _, mut gamedatas, _) = data;
             for gamedata in (&mut gamedatas).join() {
-                gamedata.score += 10;
+                gamedata.score += 10 * gamedata.level;
             }
         }
     }

@@ -163,24 +163,47 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         )?;
     }
 
-    let game_data = ecs.read_storage::<components::GameData>();
-    for game_data in game_data.join() {
-        //Score
-        let score = "Score: ".to_string() + &game_data.score.to_string();
+    //Health
+    let players = ecs.read_storage::<components::Player>();
+    for player in (&players).join() {
+        let health_text = "Health: ".to_string() + &player.health.to_string();
 
-        let surface = font.render(&score).solid(Color::RGB(255,255,255)).map_err(|e|e.to_string())?;
+        let surface = font.render(&health_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
         let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
 
-        let target = Rect::new(10i32, 0i32, 100u32, 50u32);
+        let target = Rect::new((crate::SCREEN_WIDTH - 290) as i32, 0i32, 110u32, 50u32);
+        canvas.copy(&surface_texture, None, Some(target))?;
+    }
+
+    let game_data = ecs.read_storage::<components::GameData>();
+    for game_data in (&game_data).join() {
+        //Score
+        let score_text = "Score: ".to_string() + &game_data.score.to_string();
+
+        let surface = font.render(&score_text).solid(Color::RGB(255, 255, 255)).map_err(|e|e.to_string())?;
+        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+
+        let target = Rect::new(10i32, 0i32, 140u32, 50u32);
         canvas.copy(&surface_texture, None, Some(target))?;
 
         //Level
-        let level = "Level: ".to_string() + &game_data.level.to_string();
+        let level_text = "Level: ".to_string() + &game_data.level.to_string();
 
-        let surface = font.render(&level).solid(Color::RGB(255,255,255)).map_err(|e|e.to_string())?;
+        let surface = font.render(&level_text).solid(Color::RGB(255,255,255)).map_err(|e|e.to_string())?;
         let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
 
-        let target = Rect::new((crate::SCREEN_WIDTH-110) as i32, 0i32, 100u32, 50u32);
+        let target = Rect::new((crate::SCREEN_WIDTH-140) as i32, 0i32, 110u32, 50u32);
+        canvas.copy(&surface_texture, None, Some(target))?;
+    }
+    //Total entities
+    {
+        let entity_count = ecs.entities().join().count();
+        let entity_text = "Total Entities: ".to_string() + &entity_count.to_string();
+
+        let surface = font.render(&entity_text).solid(Color::RGB(255, 0, 0)).map_err(|e| e.to_string())?;
+        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+
+        let target = Rect::new(10i32, (crate::SCREEN_HEIGHT - 100) as i32, 150u32, 60u32);
         canvas.copy(&surface_texture, None, Some(target))?;
     }
 

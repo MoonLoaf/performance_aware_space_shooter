@@ -56,11 +56,11 @@ impl<'a> System<'a> for AsteroidCollider {
     );
 
     fn run (&mut self, data: Self::SystemData) {
-        let (positions, renderables, player, asteroids, entities) = data;
+        let (positions, renderables, mut player, asteroids, entities) = data;
 
-        for(player_pos, player_renderable, _, entity) in (&positions, &renderables, &player, &entities).join() {
+        for(player_pos, player_renderable, player, player_entity) in (&positions, &renderables, &mut player, &entities).join() {
 
-            for(asteroid_pos, asteroid_renderable, _) in (&positions, &renderables, &asteroids).join() {
+            for(asteroid_pos, asteroid_renderable, _, asteroid_entity) in (&positions, &renderables, &asteroids, &entities).join() {
                 let diff_x: f64 = (player_pos.x - asteroid_pos.x).abs();
                 let diff_y: f64 = (player_pos.y - asteroid_pos.y).abs();
 
@@ -69,7 +69,12 @@ impl<'a> System<'a> for AsteroidCollider {
                 if hypotenuse < (asteroid_renderable.output_width + player_renderable.output_width) as f64 / 2.0 {
                     //println!("Collision");
                     //TODO pooling?
-                    entities.delete(entity).ok();
+                    entities.delete(asteroid_entity).ok();
+                    player.health -= 1;
+
+                    if player.health < 1 {
+                        entities.delete(player_entity).ok();
+                    }
                 }
             }
         }
