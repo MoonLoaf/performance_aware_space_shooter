@@ -37,11 +37,11 @@ fn main() -> Result<(), String> {
 
     let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1920, 1080)
     .position_centered()
+        .fullscreen()
         .build()
         .expect("Could not init video subsystem");
 
     let mut canvas = window.into_canvas().accelerated().build().expect("init canvas failed");
-    sdl2::hint::set("SDL_HINT_RENDER_VSYNC", "0");
     let texture_creator = canvas.texture_creator();
 
     //Load and add these to texture manager
