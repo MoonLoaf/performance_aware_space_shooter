@@ -4,7 +4,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{WindowCanvas, TextureCreator};
 use sdl2::video::WindowContext;
-use sdl2::image::{InitFlag, LoadTexture};
+use sdl2::image::{InitFlag};
 
 use specs::{World, WorldExt, Join, DispatcherBuilder};
 
@@ -31,8 +31,6 @@ pub struct DeltaTime(f64);
 fn main() -> Result<(), String> {
     //println!("Starting");
 
-    sdl2::hint::set("SDL_HINT_RENDER_VSYNC", "0");
-
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
@@ -43,24 +41,16 @@ fn main() -> Result<(), String> {
         .expect("Could not init video subsystem");
 
     let mut canvas = window.into_canvas().accelerated().build().expect("init canvas failed");
+    sdl2::hint::set("SDL_HINT_RENDER_VSYNC", "0");
     let texture_creator = canvas.texture_creator();
 
-    //TODO Could make texture manager take care of creating and adding to collection at the same time
-    //Character textures
-    let rocket_tex = texture_creator.load_texture("Assets/Images/rocket.png")?;
-    let laser_tex = texture_creator.load_texture("Assets/Images/laser.png")?;
-    //Asteroid textures
-    let asteroid_1_tex = texture_creator.load_texture("Assets/Images/asteroid_1.png")?;
-    let asteroid_2_tex = texture_creator.load_texture("Assets/Images/asteroid_2.png")?;
-    let asteroid_3_tex = texture_creator.load_texture("Assets/Images/asteroid_3.png")?;
-
-    //Add these to texture manager
+    //Load and add these to texture manager
     let mut texture_manager = TextureManager::new();
-    texture_manager.add_texture("Assets/Images/rocket.png".to_string(), &rocket_tex);
-    texture_manager.add_texture("Assets/Images/asteroid_1.png".to_string(), &asteroid_1_tex);
-    texture_manager.add_texture("Assets/Images/asteroid_2.png".to_string(), &asteroid_2_tex);
-    texture_manager.add_texture("Assets/Images/asteroid_3.png".to_string(), &asteroid_3_tex);
-    texture_manager.add_texture("Assets/Images/laser.png".to_string(), &laser_tex);
+    texture_manager.add_texture("Assets/Images/rocket.png".to_string(), &texture_creator)?;
+    texture_manager.add_texture("Assets/Images/asteroid_1.png".to_string(), &texture_creator)?;
+    texture_manager.add_texture("Assets/Images/asteroid_2.png".to_string(), &texture_creator)?;
+    texture_manager.add_texture("Assets/Images/asteroid_3.png".to_string(), &texture_creator)?;
+    texture_manager.add_texture("Assets/Images/laser.png".to_string(), &texture_creator)?;
 
     
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
@@ -80,7 +70,7 @@ fn main() -> Result<(), String> {
 
     let mut dispatcher = DispatcherBuilder::new()
         .with(asteroid::AsteroidMovement, "asteroid_movement", &[])
-        .with(asteroid::AsteroidCollider, "asteroid_collider", &[])
+        //.with(asteroid::AsteroidCollider, "asteroid_collider", &[])
         .with(laser::LaserMovement, "laser_movement", &[])
         .with(laser::LaserDamage, "laser_damage", &[])
         .build();
