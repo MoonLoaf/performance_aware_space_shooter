@@ -132,22 +132,21 @@ fn main() -> Result<(), String> {
                 _ => {}
             }
         }
-
         let now = Instant::now();
         let delta_time = now.duration_since(last_frame_time).as_secs_f64();
         last_frame_time = now;
 
-        // Update DeltaTime resource with the new value
-        game_state.ecs.write_resource::<DeltaTime>().0 = delta_time;
-
         frame_count += 1;
-        let elapsed_time = last_frame_time_fps.elapsed();
 
-        if elapsed_time.as_secs() >= 1 {
+        let elapsed_time_fps = last_frame_time_fps.elapsed();
+        if elapsed_time_fps.as_secs() >= 1 {
             fps = frame_count;
             frame_count = 0;
             last_frame_time_fps += Duration::new(1, 0);
         }
+
+        // Update DeltaTime resource with the new value
+        game_state.ecs.write_resource::<DeltaTime>().0 = delta_time;
 
         game::update(&mut game_state.ecs, &mut input_manager, delta_time);
         dispatcher.dispatch(&game_state.ecs);
