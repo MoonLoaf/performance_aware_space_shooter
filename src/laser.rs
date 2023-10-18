@@ -10,16 +10,17 @@ impl<'a> System<'a> for LaserMovement {
         WriteStorage<'a, components::Position>,
         WriteStorage<'a, components::Renderable>,
         WriteStorage<'a, components::Laser>,
-        Entities<'a>
+        Entities<'a>,
+        Read<'a, crate::DeltaTime>,
     );
     fn run (&mut self, data: Self::SystemData) {
-        let (mut positions, mut renderables, laser, entities) = data;
+        let (mut positions, mut renderables, laser, entities, delta_time) = data;
 
         for (position, renderable, laser, entity) in (&mut positions, &mut renderables, &laser, &entities).join() {
             let radians = position.rot.to_radians();
 
-            position.x += laser.speed * radians.sin();
-            position.y -= laser.speed * radians.cos();
+            position.x += laser.speed * delta_time.0 * radians.sin();
+            position.y -= laser.speed * delta_time.0 * radians.cos();
 
             if position.x > crate::SCREEN_WIDTH.into() || position.x < 0.0 || position.y > crate::SCREEN_HEIGHT.into() || position.y < 0.0 {
                 entities.delete(entity).ok();

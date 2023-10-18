@@ -16,7 +16,7 @@ enum Quadrant {
 
 const PLAYER_MAX_HEALTH: i32 = 10;
 
-pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>) {
+pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_time: f64) {
     reload_world_if_no_players(ecs);
 
     let mut current_player_pos = components::Position { x: 0.0, y: 0.0, rot: 0.0 };
@@ -50,13 +50,13 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>) {
 
         for (player, pos, renderable) in (&mut player, &mut positions, &mut renderables).join() {
             if crate::input_manager::is_key_pressed(&input_manager, "D") {
-                pos.rot += player.rotation_speed;
+                pos.rot += player.rotation_speed * delta_time;
             }
             if crate::input_manager::is_key_pressed(&input_manager, "A") {
-                pos.rot -= player.rotation_speed;
+                pos.rot -= player.rotation_speed * delta_time;
             }
 
-            update_movement(pos, player);
+            update_movement(pos, player, delta_time);
             if crate::input_manager::is_key_pressed(&input_manager, "W") {
                 let radians = pos.rot.to_radians();
 
@@ -104,7 +104,7 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>) {
     }
 }
 
-pub fn update_movement(pos: &mut crate::components::Position, player: &mut crate::components::Player) {
+pub fn update_movement(pos: &mut components::Position, player: &mut components::Player, delta_time: f64) {
 
     player.current_speed *= player.friction;
     player.current_speed += player.impulse;
@@ -114,8 +114,8 @@ pub fn update_movement(pos: &mut crate::components::Position, player: &mut crate
         player.current_speed = player.current_speed * player.max_speed;
     }
 
-    pos.x += player.current_speed.x;
-    pos.y -= player.current_speed.y;
+    pos.x += player.current_speed.x * delta_time;
+    pos.y -= player.current_speed.y * delta_time;
 
     player.impulse = vector2d::Vector2D::new(0.0, 0.0);
 }
@@ -123,8 +123,8 @@ pub fn update_movement(pos: &mut crate::components::Position, player: &mut crate
 pub fn load_world( ecs: &mut World) {
     //Create Player
     ecs.create_entity()
-        .with(crate::components::Position { x: 350.0, y: 250.0, rot: 0.0 })
-        .with(crate::components::Renderable {
+        .with(components::Position { x: 350.0, y: 250.0, rot: 0.0 })
+        .with(components::Renderable {
             texture_name: String::from("Assets/Images/rocket.png"),
             img_width: 276,
             img_height: 364,
@@ -132,19 +132,19 @@ pub fn load_world( ecs: &mut World) {
             output_height: 80,
             img_rotation: 0.0
         })
-        .with(crate::components::Player {
+        .with(components::Player {
             impulse: vector2d::Vector2D::new(0.0,0.0,),
             current_speed: vector2d::Vector2D::new(0.0,0.0,),
-            rotation_speed: 3.0,
-            max_speed: 4.0,
-            friction: 5.0,
+            rotation_speed: 200.0,
+            max_speed: 200.0,
+            friction: 50.0,
             health: 3
         })
     .build();
     //Asteroid
     ecs.create_entity()
-        .with(crate::components::Position { x: 500.0, y: 235.0, rot: 45.0 })
-        .with(crate::components::Renderable {
+        .with(components::Position { x: 500.0, y: 235.0, rot: 45.0 })
+        .with(components::Renderable {
             texture_name: String::from(get_random_asteroid_texture_name()),
             img_width: 215,
             img_height: 215,
@@ -152,9 +152,9 @@ pub fn load_world( ecs: &mut World) {
             output_height: 100,
             img_rotation: 0.0
         })
-        .with(crate::components::Asteroid{
-            rotation_speed: 2.0,
-            speed: 4.0,
+        .with(components::Asteroid{
+            rotation_speed: 200.0,
+            speed: 200.0,
             friction: 7.0
         })
     .build();
@@ -183,7 +183,7 @@ fn fire_laser(ecs: &mut World, player_position: components::Position) {
             img_rotation: 0.0
          })
         .with(components::Laser {
-            speed: 10.0
+            speed: 500.0
     })
     .build();
 }
@@ -207,14 +207,15 @@ fn spawn_asteroids(ecs: &mut World, player_pos: &components::Position) {
         let mut amount = 0;
         for data in (&game_data).join() {
             amount = data.level * 2;
+            //amount = 10000;
         }
         amount
     };
 
     for _ in 0..amount_to_spawn {
         let spawn_position = generate_spawn_position(&player_pos);
-        let asteroid_speed = rand::thread_rng().gen_range(1.0..6.0);
-        let asteroid_rotation_speed = rand::thread_rng().gen_range(1.0..5.0);
+        let asteroid_speed = rand::thread_rng().gen_range(70.0..250.0);
+        let asteroid_rotation_speed = rand::thread_rng().gen_range(-400.0..400.0);
         let asteroid_size = rand::thread_rng().gen_range(40..110);
 
         create_asteroid(ecs, spawn_position, asteroid_size, asteroid_speed, asteroid_rotation_speed);
@@ -233,7 +234,7 @@ fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_siz
             y: adjusted_y,
             rot: position.rot,
         })
-        .with(crate::components::Renderable {
+        .with(components::Renderable {
             texture_name: String::from(get_random_asteroid_texture_name()),
             img_width: 215,
             img_height: 215,
@@ -241,7 +242,7 @@ fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_siz
             output_height: asteroid_size,
             img_rotation: 0.0
         })
-        .with(crate::components::Asteroid{
+        .with(components::Asteroid{
             rotation_speed: asteroid_rotation_speed,
             speed: asteroid_speed,
             friction: 7.0
@@ -351,7 +352,7 @@ fn get_random_asteroid_texture_name() -> String {
 fn reload_world_if_no_players(ecs: &mut World) {
     let mut must_reload_world = false;
     {
-        let players = ecs.read_storage::<crate::components::Player>();
+        let players = ecs.read_storage::<components::Player>();
         if players.join().count() < 1 {
             must_reload_world = true;
         }

@@ -1,23 +1,26 @@
 use specs::{System, WriteStorage, Join};
 use specs::prelude::Entities;
+use specs::prelude::*;
 
 use crate::{components};
-pub struct AsteroidMover;
+pub struct AsteroidMovement;
 
 pub struct AsteroidCollider;
 
-impl<'a> System<'a> for AsteroidMover {
+impl<'a> System<'a> for AsteroidMovement {
     type SystemData = (
         WriteStorage<'a, components::Position>,
         WriteStorage<'a, components::Renderable>,
-        WriteStorage<'a, components::Asteroid>
+        WriteStorage<'a, components::Asteroid>,
+        Read<'a, crate::DeltaTime>,
     );
     fn run (&mut self, mut data: Self::SystemData) {
+        let delta_time = data.3 .0;
         for (pos, renderable, asteroid) in (&mut data.0, &mut data.1, &data.2).join() {
             let radians = pos.rot.to_radians();
 
-            pos.x += asteroid.speed * radians.sin();
-            pos.y -= asteroid.speed* radians.cos();
+            pos.x += asteroid.speed * delta_time * radians.sin();
+            pos.y -= asteroid.speed * delta_time * radians.cos();
 
             let half_width = (renderable.output_width / 2) as u32;
             let half_height = (renderable.output_height / 2) as u32;
@@ -34,7 +37,7 @@ impl<'a> System<'a> for AsteroidMover {
                     pos.rot = 180.0 - pos.rot;
                 }
             }
-            renderable.img_rotation += asteroid.rotation_speed;
+            renderable.img_rotation += asteroid.rotation_speed * delta_time;
 
             if renderable.img_rotation > 360.0 {
                 renderable.img_rotation -= 360.0;
