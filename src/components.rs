@@ -44,5 +44,6 @@ pub struct Laser {
 #[derive(Component)]
 pub struct GameData {
     pub score: u32,
-    pub level: u32
+    pub level: u32,
+    pub invincible_player: bool
 }

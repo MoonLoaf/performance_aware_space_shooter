@@ -55,28 +55,34 @@ impl<'a> System<'a> for AsteroidCollider {
         WriteStorage<'a, components::Renderable>,
         WriteStorage<'a, components::Player>,
         WriteStorage<'a, components::Asteroid>,
+        ReadStorage<'a, components::GameData>,
         Entities<'a>
     );
 
     fn run (&mut self, data: Self::SystemData) {
-        let (positions, renderables, mut player, asteroids, entities) = data;
+        let (positions, renderables, mut player, asteroids, game_data, entities) = data;
 
-        for(player_pos, player_renderable, player, player_entity) in (&positions, &renderables, &mut player, &entities).join() {
+        for (player_pos, player_renderable, player, player_entity) in (&positions, &renderables, &mut player, &entities).join() {
+            for data in (&game_data).join() {
+                let invincible_player = data.invincible_player;
 
-            for(asteroid_pos, asteroid_renderable, _, asteroid_entity) in (&positions, &renderables, &asteroids, &entities).join() {
-                let diff_x: f64 = (player_pos.x - asteroid_pos.x).abs();
-                let diff_y: f64 = (player_pos.y - asteroid_pos.y).abs();
+                if !invincible_player {
+                    for (asteroid_pos, asteroid_renderable, _, asteroid_entity) in (&positions, &renderables, &asteroids, &entities).join() {
+                        let diff_x: f64 = (player_pos.x - asteroid_pos.x).abs();
+                        let diff_y: f64 = (player_pos.y - asteroid_pos.y).abs();
 
-                let hypotenuse: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
+                        let hypotenuse: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
 
-                if hypotenuse < (asteroid_renderable.output_width + player_renderable.output_width) as f64 / 2.0 {
-                    //println!("Collision");
-                    //TODO pooling?
-                    entities.delete(asteroid_entity).ok();
-                    player.health -= 1;
+                        if hypotenuse < (asteroid_renderable.output_width + player_renderable.output_width) as f64 / 2.0 {
+                            println!("Collision");
+                            //TODO pooling?
+                            entities.delete(asteroid_entity).ok();
+                            player.health -= 1;
 
-                    if player.health < 1 {
-                        entities.delete(player_entity).ok();
+                            if player.health < 1 {
+                                entities.delete(player_entity).ok();
+                            }
+                        }
                     }
                 }
             }

@@ -3,7 +3,8 @@ use specs::{World, WorldExt, Builder, Join};
 use vector2d::Vector2D;
 use rand::Rng;
 
-use crate::components;
+use crate::{components};
+use crate::components::GameData;
 use crate::input_manager;
 
 #[derive(PartialEq)]
@@ -15,7 +16,6 @@ enum Quadrant {
 }
 
 const PLAYER_MAX_HEALTH: i32 = 10;
-
 pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_time: f64) {
     reload_world_if_no_players(ecs);
 
@@ -36,7 +36,7 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
             asteroid_count = asteroids.join().count();
         }
         if asteroid_count < 1 {
-            spawn_asteroids(ecs, &current_player_pos);
+            spawn_asteroids(ecs, &current_player_pos, false);
         }
     }
 
@@ -44,20 +44,20 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
     let mut should_fire_laser = false;
 
     {
-        let mut positions = ecs.write_storage::<crate::components::Position>();
-        let mut player = ecs.write_storage::<crate::components::Player>();
-        let mut renderables = ecs.write_storage::<crate::components::Renderable>();
+        let mut positions = ecs.write_storage::<components::Position>();
+        let mut player = ecs.write_storage::<components::Player>();
+        let mut renderables = ecs.write_storage::<components::Renderable>();
 
         for (player, pos, renderable) in (&mut player, &mut positions, &mut renderables).join() {
-            if crate::input_manager::is_key_pressed(&input_manager, "D") {
+            if input_manager::is_key_pressed(&input_manager, "D") {
                 pos.rot += player.rotation_speed * delta_time;
             }
-            if crate::input_manager::is_key_pressed(&input_manager, "A") {
+            if input_manager::is_key_pressed(&input_manager, "A") {
                 pos.rot -= player.rotation_speed * delta_time;
             }
 
             update_movement(pos, player, delta_time);
-            if crate::input_manager::is_key_pressed(&input_manager, "W") {
+            if input_manager::is_key_pressed(&input_manager, "W") {
                 let radians = pos.rot.to_radians();
 
                 let move_vec = Vector2D::<f64>::new(player.max_speed * radians.sin(),
@@ -88,6 +88,7 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
                 pos.y += crate::SCREEN_HEIGHT as f64;
             }
 
+            //Shooting
             if input_manager::is_key_pressed(&input_manager, " ") {
                 input_manager::key_up(input_manager, " ".to_string());
                 should_fire_laser = true;
@@ -95,12 +96,25 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
                 player_pos.y = pos.y;
                 player_pos.rot = pos.rot;
             }
-
             renderable.img_rotation = pos.rot;
         }
     }
     if should_fire_laser {
         fire_laser(ecs, player_pos);
+    }
+    //toggle player invincibility
+    if input_manager::is_key_pressed(&input_manager, "i") {
+        input_manager::key_up(input_manager, "i".to_string());
+        let mut gamedata = ecs.write_storage::<GameData>();
+        for data in (&mut gamedata).join() {
+            data.invincible_player = !data.invincible_player;
+            println!("invincible_player: {}", data.invincible_player);
+        }
+    }
+    //spawning 1000 asteroids
+    if input_manager::is_key_pressed(&input_manager, "o") {
+        input_manager::key_up(input_manager, "o".to_string());
+        spawn_asteroids(ecs, &current_player_pos, true);
     }
 }
 
@@ -160,7 +174,7 @@ pub fn load_world( ecs: &mut World) {
     .build();
 
     ecs.create_entity()
-        .with(components::GameData{score: 0, level: 1})
+        .with(components::GameData{score: 0, level: 1, invincible_player: false})
     .build();
 }
 
@@ -188,38 +202,50 @@ fn fire_laser(ecs: &mut World, player_position: components::Position) {
     .build();
 }
 
-fn spawn_asteroids(ecs: &mut World, player_pos: &components::Position) {
-    {
-        let mut game_data = ecs.write_storage::<components::GameData>();
-        for gamedata in (&mut game_data).join() {
-            gamedata.level += 1;
-        }
-        let mut players = ecs.write_storage::<components::Player>();
-        for player in (&mut players).join() {
-            if player.health < PLAYER_MAX_HEALTH {
-                player.health += 1;
-            }
-        }
-    }
+fn spawn_asteroids(ecs: &mut World, player_pos: &components::Position, forced: bool) {
+   if !forced {
+       {
+           let mut game_data = ecs.write_storage::<components::GameData>();
+           for gamedata in (&mut game_data).join() {
+               gamedata.level += 1;
+           }
+           let mut players = ecs.write_storage::<components::Player>();
+           for player in (&mut players).join() {
+               if player.health < PLAYER_MAX_HEALTH {
+                   player.health += 1;
+               }
+           }
+       }
 
-    let amount_to_spawn: u32 = {
-        let game_data = ecs.read_storage::<components::GameData>();
-        let mut amount = 0;
-        for data in (&game_data).join() {
-            amount = data.level * 2;
-            //amount = 10000;
-        }
-        amount
-    };
+       let amount_to_spawn: u32 = {
+           let game_data = ecs.read_storage::<components::GameData>();
+           let mut amount = 0;
+           for data in (&game_data).join() {
+               amount = data.level * 2;
+               //amount = 10000;
+           }
+           amount
+       };
+       for _ in 0..amount_to_spawn {
+           let spawn_position = generate_spawn_position(&player_pos);
+           let asteroid_speed = rand::thread_rng().gen_range(70.0..250.0);
+           let asteroid_rotation_speed = rand::thread_rng().gen_range(-400.0..400.0);
+           let asteroid_size = rand::thread_rng().gen_range(40..110);
 
-    for _ in 0..amount_to_spawn {
-        let spawn_position = generate_spawn_position(&player_pos);
-        let asteroid_speed = rand::thread_rng().gen_range(70.0..250.0);
-        let asteroid_rotation_speed = rand::thread_rng().gen_range(-400.0..400.0);
-        let asteroid_size = rand::thread_rng().gen_range(40..110);
+           create_asteroid(ecs, spawn_position, asteroid_size, asteroid_speed, asteroid_rotation_speed);
+       }
+   }
+   else
+   {
+       for _ in 0..1000 {
+           let spawn_position = generate_spawn_position(&player_pos);
+           let asteroid_speed = rand::thread_rng().gen_range(70.0..250.0);
+           let asteroid_rotation_speed = rand::thread_rng().gen_range(-400.0..400.0);
+           let asteroid_size = rand::thread_rng().gen_range(40..110);
 
-        create_asteroid(ecs, spawn_position, asteroid_size, asteroid_speed, asteroid_rotation_speed);
-    }
+           create_asteroid(ecs, spawn_position, asteroid_size, asteroid_speed, asteroid_rotation_speed);
+       }
+   }
 }
 
 fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_size: u32, asteroid_speed: f64, asteroid_rotation_speed: f64){

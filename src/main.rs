@@ -70,7 +70,7 @@ fn main() -> Result<(), String> {
 
     let mut dispatcher = DispatcherBuilder::new()
         .with(asteroid::AsteroidMovement, "asteroid_movement", &[])
-        //.with(asteroid::AsteroidCollider, "asteroid_collider", &[])
+        .with(asteroid::AsteroidCollider, "asteroid_collider", &[])
         .with(laser::LaserMovement, "laser_movement", &[])
         .with(laser::LaserDamage, "laser_damage", &[])
         .build();
@@ -101,6 +101,20 @@ fn main() -> Result<(), String> {
                 },
                 Event::KeyUp {keycode: Some(Keycode::Space), .. } => {
                     input_manager::key_up(&mut input_manager, " ".to_string())
+                },
+                //Turn player invincible
+                Event::KeyDown {keycode: Some(Keycode::I), .. } => {
+                    input_manager::key_down(&mut input_manager, "i".to_string())
+                },
+                Event::KeyUp {keycode: Some(Keycode::I), .. } => {
+                    input_manager::key_up(&mut input_manager, "i".to_string())
+                },
+                //Spawn 1000 asteroids
+                Event::KeyDown {keycode: Some(Keycode::O), .. } => {
+                    input_manager::key_down(&mut input_manager, "o".to_string())
+                },
+                Event::KeyUp {keycode: Some(Keycode::O), .. } => {
+                    input_manager::key_up(&mut input_manager, "o".to_string())
                 },
                 //Keyboard events sent to input_manager
                 Event::KeyDown {keycode, ..} => {
@@ -207,6 +221,15 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
 
         let target = Rect::new((crate::SCREEN_WIDTH-140) as i32, 0i32, 110u32, 50u32);
         canvas.copy(&surface_texture, None, Some(target))?;
+
+        //Utils
+        let utils_text = format!("Press O to spawn 1K asteroids || Press I for player invincibility || Invincibility: {}", game_data.invincible_player);
+
+        let surface = font.render(&utils_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
+        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+
+        let target = Rect::new((SCREEN_WIDTH / 2 - 450) as i32, (SCREEN_HEIGHT - 100) as i32, 900u32, 75u32);
+        canvas.copy(&surface_texture, None, Some(target))?;
     }
     //Total entities
     {
@@ -216,7 +239,7 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         let surface = font.render(&entity_text).solid(Color::RGB(255, 0, 0)).map_err(|e| e.to_string())?;
         let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
 
-        let target = Rect::new(10i32, (crate::SCREEN_HEIGHT - 100) as i32, 150u32, 60u32);
+        let target = Rect::new(10i32, (SCREEN_HEIGHT - 100) as i32, 150u32, 60u32);
         canvas.copy(&surface_texture, None, Some(target))?;
     }
     //fps
@@ -226,7 +249,7 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         let surface = font.render(&fps_text).solid(Color::RGB(0, 255, 0)).map_err(|e| e.to_string())?;
         let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
 
-        let target = Rect::new((crate::SCREEN_WIDTH-140) as i32, (crate::SCREEN_HEIGHT - 100) as i32, 90u32, 40u32);
+        let target = Rect::new((SCREEN_WIDTH-140) as i32, (SCREEN_HEIGHT - 100) as i32, 90u32, 40u32);
         canvas.copy(&surface_texture, None, Some(target))?;
     }
 
