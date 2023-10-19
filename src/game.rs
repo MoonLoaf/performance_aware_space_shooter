@@ -60,8 +60,7 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
             if input_manager::is_key_pressed(&input_manager, "W") {
                 let radians = pos.rot.to_radians();
 
-                let move_vec = Vector2D::<f64>::new(player.max_speed * radians.sin(),
-                                                    player.max_speed * radians.cos());
+                let move_vec = Vector2D::<f64>::new(player.max_speed * radians.sin(), player.max_speed * radians.cos());
 
                 player.impulse += move_vec;
             }

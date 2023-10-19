@@ -223,12 +223,20 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         canvas.copy(&surface_texture, None, Some(target))?;
 
         //Utils
-        let utils_text = format!("Press O to spawn 1K asteroids || Press I for player invincibility || Invincibility: {}", game_data.invincible_player);
+        let invis_text = format!("Press I for player invincibility || Invincibility: {}", game_data.invincible_player);
 
-        let surface = font.render(&utils_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
+        let surface = font.render(&invis_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
         let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
 
-        let target = Rect::new((SCREEN_WIDTH / 2 - 450) as i32, (SCREEN_HEIGHT - 100) as i32, 900u32, 75u32);
+        let target = Rect::new((SCREEN_WIDTH / 2 - 300) as i32, (SCREEN_HEIGHT - 100) as i32, 600u32, 65u32);
+        canvas.copy(&surface_texture, None, Some(target))?;
+
+        let asteroid_text = "Press O to spawn 1K asteroids".to_string();
+
+        let surface = font.render(&asteroid_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
+        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+
+        let target = Rect::new((SCREEN_WIDTH / 2 - 200) as i32, (SCREEN_HEIGHT - 150) as i32, 400u32, 60u32);
         canvas.copy(&surface_texture, None, Some(target))?;
     }
     //Total entities
