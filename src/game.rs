@@ -150,7 +150,7 @@ pub fn load_world( ecs: &mut World) {
             current_speed: vector2d::Vector2D::new(0.0,0.0,),
             rotation_speed: 200.0,
             max_speed: 200.0,
-            friction: 50.0,
+            friction: 0.9995,
             health: 3
         })
     .build();
@@ -168,7 +168,7 @@ pub fn load_world( ecs: &mut World) {
         .with(components::Asteroid{
             rotation_speed: 200.0,
             speed: 200.0,
-            friction: 7.0
+            friction: 1.0
         })
     .build();
 
@@ -270,7 +270,7 @@ fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_siz
         .with(components::Asteroid{
             rotation_speed: asteroid_rotation_speed,
             speed: asteroid_speed,
-            friction: 7.0
+            friction: 1.0
         })
     .build();
 }

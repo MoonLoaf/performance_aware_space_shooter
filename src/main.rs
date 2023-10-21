@@ -4,8 +4,6 @@ use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{WindowCanvas, TextureCreator};
 use sdl2::video::WindowContext;
-use sdl2::image::{InitFlag};
-
 use specs::{World, WorldExt, Join, DispatcherBuilder};
 
 use std::collections::HashMap;
@@ -33,7 +31,6 @@ fn main() -> Result<(), String> {
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
-    let _image_context = sdl2::image::init(InitFlag::PNG)?;
 
     let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1920, 1080)
     .position_centered()
@@ -52,7 +49,6 @@ fn main() -> Result<(), String> {
     texture_manager.add_texture("Assets/Images/asteroid_3.png".to_string(), &texture_creator)?;
     texture_manager.add_texture("Assets/Images/laser.png".to_string(), &texture_creator)?;
 
-    
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let font = ttf_context.load_font(&"Assets/Fonts/Orbitron-Regular.ttf", 100)?;
     
