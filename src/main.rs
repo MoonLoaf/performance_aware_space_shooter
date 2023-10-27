@@ -18,8 +18,8 @@ pub mod asteroid;
 pub mod laser;
 pub mod texture_manager;
 
-const SCREEN_WIDTH: u32 = 1920;
-const SCREEN_HEIGHT: u32 = 1080;
+const SCREEN_WIDTH: u32 = 1280;
+const SCREEN_HEIGHT: u32 = 720;
 
 struct State { ecs: World }
 
@@ -32,9 +32,9 @@ fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
-    let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1920, 1080)
+    let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1280, 720)
     .position_centered()
-        .fullscreen()
+        //.fullscreen()
         .build()
         .expect("Could not init video subsystem");
 
@@ -71,7 +71,18 @@ fn main() -> Result<(), String> {
         .with(laser::LaserDamage, "laser_damage", &[])
         .build();
 
-    game::load_world(&mut game_state.ecs);
+    //let mut ui_manager = UiManager::new();
+    //let mut health_text: Option<String> = None;
+
+    // {
+    //     let players = game_state.ecs.read_storage::<components::Player>();
+    //     for player in (&players).join() {
+    //         health_text = Some(format!("Health: {}", player.health));
+    //     }
+    //     if let Some(text) = &health_text {
+    //         ui_manager.add_texture(String::from("health_text"), &texture_creator, &font, text)?;
+    //     }
+    // }
 
     game_state.ecs.insert(DeltaTime(0.0));
 
@@ -79,6 +90,8 @@ fn main() -> Result<(), String> {
     let mut last_frame_time = Instant::now();
     let mut last_frame_time_fps = Instant::now();
     let mut fps = 0u64;
+
+    let mut update_counter = 100;
 
     'running:loop {
         for event in event_pump.poll_iter() {
@@ -147,16 +160,29 @@ fn main() -> Result<(), String> {
 
         // Update DeltaTime resource with the new value
         game_state.ecs.write_resource::<DeltaTime>().0 = delta_time;
-
         game::update(&mut game_state.ecs, &mut input_manager, delta_time);
         dispatcher.dispatch(&game_state.ecs);
         game_state.ecs.maintain();
-        render(&mut canvas, &texture_creator, &mut texture_manager, &font, &game_state.ecs, &fps)?;
+       // render(&mut ui_manager, &mut canvas, &texture_creator, &mut texture_manager, &font, &game_state.ecs, &fps, true)?;
+
+
+        update_counter += 1;
+        if update_counter <= 100 {
+            //show ui without updating values
+            render(&mut canvas, &texture_creator, &mut texture_manager, &font, &game_state.ecs, &fps, false)?;
+        }
+        else if update_counter >= 100
+        {
+            //update values and display, set counter to 0
+            update_counter = 0;
+            render(&mut canvas, &texture_creator, &mut texture_manager, &font, &game_state.ecs, &fps, true)?;
+        }
     }
     return Ok(())
 }
 
-fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, texture_manager: &mut TextureManager, font: &sdl2::ttf::Font, ecs: &World, fps: &u64) -> Result<(), String> {
+fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowContext>, texture_manager: &mut TextureManager, font: &sdl2::ttf::Font, ecs: &World, fps: &u64, update_ui: bool) -> Result<(), String>
+{
 
     let color = Color::RGB(0,0,0);
     canvas.set_draw_color(color);
@@ -186,76 +212,85 @@ fn render(canvas: &mut WindowCanvas, texture_creator: &TextureCreator<WindowCont
         )?;
     }
 
-    //Health
-    let players = ecs.read_storage::<components::Player>();
-    for player in (&players).join() {
-        let health_text = "Health: ".to_string() + &player.health.to_string();
+    //UI
+    if update_ui == true
+    {
+        //Health
+        let players = ecs.read_storage::<components::Player>();
+        for player in (&players).join() {
+            let health_text = "Health: ".to_string() + &player.health.to_string();
 
-        let surface = font.render(&health_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
-        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+            let target = Rect::new((SCREEN_WIDTH - 290) as i32, 0i32, 110u32, 50u32);
+            texture_manager.add_ui_texture(String::from("health_text"), &texture_creator, font, &String::from(health_text))?;
+            let surface_texture = texture_manager.get_texture("health_text").ok_or("Texture not found")?;
 
+            canvas.copy(&surface_texture, None, Some(target))?;
+        }
+    }
+    else {
+        let surface_texture = texture_manager.get_texture("health_text").ok_or("Texture not found")?;
         let target = Rect::new((crate::SCREEN_WIDTH - 290) as i32, 0i32, 110u32, 50u32);
         canvas.copy(&surface_texture, None, Some(target))?;
     }
 
-    let game_data = ecs.read_storage::<components::GameData>();
-    for game_data in (&game_data).join() {
-        //Score
-        let score_text = "Score: ".to_string() + &game_data.score.to_string();
-
-        let surface = font.render(&score_text).solid(Color::RGB(255, 255, 255)).map_err(|e|e.to_string())?;
-        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
-
-        let target = Rect::new(10i32, 0i32, 140u32, 50u32);
-        canvas.copy(&surface_texture, None, Some(target))?;
-
-        //Level
-        let level_text = "Level: ".to_string() + &game_data.level.to_string();
-
-        let surface = font.render(&level_text).solid(Color::RGB(255,255,255)).map_err(|e|e.to_string())?;
-        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
-
-        let target = Rect::new((crate::SCREEN_WIDTH-140) as i32, 0i32, 110u32, 50u32);
-        canvas.copy(&surface_texture, None, Some(target))?;
-
-        //Utils
-        let invis_text = format!("Press I for player invincibility || Invincibility: {}", game_data.invincible_player);
-
-        let surface = font.render(&invis_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
-        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
-
-        let target = Rect::new((SCREEN_WIDTH / 2 - 300) as i32, (SCREEN_HEIGHT - 100) as i32, 600u32, 65u32);
-        canvas.copy(&surface_texture, None, Some(target))?;
-
-        let asteroid_text = "Press O to spawn 1K asteroids".to_string();
-
-        let surface = font.render(&asteroid_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
-        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
-
-        let target = Rect::new((SCREEN_WIDTH / 2 - 200) as i32, (SCREEN_HEIGHT - 150) as i32, 400u32, 60u32);
-        canvas.copy(&surface_texture, None, Some(target))?;
-    }
-    //Total entities
-    {
-        let entity_count = ecs.entities().join().count();
-        let entity_text = "Total Entities: ".to_string() + &entity_count.to_string();
-
-        let surface = font.render(&entity_text).solid(Color::RGB(255, 0, 0)).map_err(|e| e.to_string())?;
-        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
-
-        let target = Rect::new(10i32, (SCREEN_HEIGHT - 100) as i32, 150u32, 60u32);
-        canvas.copy(&surface_texture, None, Some(target))?;
-    }
-    //fps
-    {
-        let fps_text = "fps: ".to_string() + &fps.to_string();
-
-        let surface = font.render(&fps_text).solid(Color::RGB(0, 255, 0)).map_err(|e| e.to_string())?;
-        let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
-
-        let target = Rect::new((SCREEN_WIDTH-140) as i32, (SCREEN_HEIGHT - 100) as i32, 90u32, 40u32);
-        canvas.copy(&surface_texture, None, Some(target))?;
-    }
+    // let game_data = ecs.read_storage::<components::GameData>();
+    // for game_data in (&game_data).join() {
+    //     //Score
+    //     let score_text = "Score: ".to_string() + &game_data.score.to_string();
+    //
+    //     let surface = font.render(&score_text).solid(Color::RGB(255, 255, 255)).map_err(|e|e.to_string())?;
+    //     let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+    //
+    //     let target = Rect::new(10i32, 0i32, 140u32, 50u32);
+    //     canvas.copy(&surface_texture, None, Some(target))?;
+    //
+    //     //Level
+    //     let level_text = "Level: ".to_string() + &game_data.level.to_string();
+    //
+    //     let surface = font.render(&level_text).solid(Color::RGB(255,255,255)).map_err(|e|e.to_string())?;
+    //     let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+    //
+    //     let target = Rect::new((crate::SCREEN_WIDTH-140) as i32, 0i32, 110u32, 50u32);
+    //     canvas.copy(&surface_texture, None, Some(target))?;
+    //
+    //     //Utils
+    //     let invis_text = format!("Press I for player invincibility || Invincibility: {}", game_data.invincible_player);
+    //
+    //     let surface = font.render(&invis_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
+    //     let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+    //
+    //     let target = Rect::new((SCREEN_WIDTH / 2 - 300) as i32, (SCREEN_HEIGHT - 100) as i32, 600u32, 65u32);
+    //     canvas.copy(&surface_texture, None, Some(target))?;
+    //
+    //     let asteroid_text = "Press O to spawn 1K asteroids".to_string();
+    //
+    //     let surface = font.render(&asteroid_text).solid(Color::RGB(255, 255, 255)).map_err(|e| e.to_string())?;
+    //     let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+    //
+    //     let target = Rect::new((SCREEN_WIDTH / 2 - 200) as i32, (SCREEN_HEIGHT - 150) as i32, 400u32, 60u32);
+    //     canvas.copy(&surface_texture, None, Some(target))?;
+    // }
+    // //Total entities
+    // {
+    //     let entity_count = ecs.entities().join().count();
+    //     let entity_text = "Total Entities: ".to_string() + &entity_count.to_string();
+    //
+    //     let surface = font.render(&entity_text).solid(Color::RGB(255, 0, 0)).map_err(|e| e.to_string())?;
+    //     let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+    //
+    //     let target = Rect::new(10i32, (SCREEN_HEIGHT - 100) as i32, 150u32, 60u32);
+    //     canvas.copy(&surface_texture, None, Some(target))?;
+    // }
+    // //fps
+    // {
+    //     let fps_text = "fps: ".to_string() + &fps.to_string();
+    //
+    //     let surface = font.render(&fps_text).solid(Color::RGB(0, 255, 0)).map_err(|e| e.to_string())?;
+    //     let surface_texture = texture_creator.create_texture_from_surface(&surface).map_err(|e| e.to_string())?;
+    //
+    //     let target = Rect::new((SCREEN_WIDTH-140) as i32, (SCREEN_HEIGHT - 100) as i32, 90u32, 40u32);
+    //     canvas.copy(&surface_texture, None, Some(target))?;
+    // }
 
     canvas.present();
     Ok(())
