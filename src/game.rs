@@ -107,7 +107,7 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
         let mut gamedata = ecs.write_storage::<GameData>();
         for data in (&mut gamedata).join() {
             data.invincible_player = !data.invincible_player;
-            println!("invincible_player: {}", data.invincible_player);
+            //println!("invincible_player: {}", data.invincible_player);
         }
     }
     //spawning 1000 asteroids
@@ -355,7 +355,7 @@ fn get_player_quadrant(pos: &components::Position) -> Quadrant {
             //println!("Player is Top left");
             Quadrant::TopLeft
         } else {
-            println!("Player is Bot left");
+            //println!("Player is Bot left");
             Quadrant::BottomLeft
         }
     } else {

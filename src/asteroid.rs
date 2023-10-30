@@ -74,7 +74,7 @@ impl<'a> System<'a> for AsteroidCollider {
                         let hypotenuse: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
 
                         if hypotenuse < (asteroid_renderable.output_width + player_renderable.output_width) as f64 / 2.0 {
-                            println!("Collision");
+                            //println!("Collision");
                             //TODO pooling?
                             entities.delete(asteroid_entity).ok();
                             player.health -= 1;
