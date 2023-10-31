@@ -2,6 +2,14 @@ use specs::{prelude::*};
 use specs_derive::Component;
 use vector2d::Vector2D;
 
+#[derive(PartialEq)]
+pub enum Quadrant {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
 #[derive(Component)]
 pub struct Renderable {
     pub texture_name: String,
@@ -33,7 +41,8 @@ pub struct Player {
 pub struct Asteroid {
     pub rotation_speed: f64,
     pub speed: f64,
-    pub friction: f64
+    pub friction: f64,
+    pub quadrant: Quadrant,
 }
 
 #[derive(Component)]

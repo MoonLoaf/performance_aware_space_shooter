@@ -38,7 +38,7 @@ fn main() -> Result<(), String> {
 
     let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1920, 1080)
     .position_centered()
-        .fullscreen()
+        //.fullscreen()
         .build()
         .expect("Could not init video subsystem");
 

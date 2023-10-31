@@ -5,15 +5,8 @@ use rand::Rng;
 
 use crate::{components};
 use crate::components::GameData;
+use crate::components::Quadrant;
 use crate::input_manager;
-
-#[derive(PartialEq)]
-enum Quadrant {
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-}
 
 const PLAYER_MAX_HEALTH: i32 = 10;
 pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_time: f64) {
@@ -168,7 +161,8 @@ pub fn load_world( ecs: &mut World) {
         .with(components::Asteroid{
             rotation_speed: 200.0,
             speed: 200.0,
-            friction: 1.0
+            friction: 1.0,
+            quadrant: get_current_quadrant(&components::Position { x: 500.0, y: 235.0, rot: 45.0 })
         })
     .build();
 
@@ -270,13 +264,14 @@ fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_siz
         .with(components::Asteroid{
             rotation_speed: asteroid_rotation_speed,
             speed: asteroid_speed,
-            friction: 1.0
+            friction: 1.0,
+            quadrant: get_current_quadrant(&position)
         })
     .build();
 }
 
 fn generate_spawn_position(player_pos: &components::Position) -> components::Position {
-    let player_quadrant = get_player_quadrant(player_pos);
+    let player_quadrant = get_current_quadrant(player_pos);
 
     // Determine quadrant based on rng. Can never be the player quadrant
     let random_chance: f64 = rand::thread_rng().gen_range(0.0..1.0);
@@ -349,7 +344,7 @@ fn generate_spawn_position(player_pos: &components::Position) -> components::Pos
     }
 }
 
-fn get_player_quadrant(pos: &components::Position) -> Quadrant {
+pub fn get_current_quadrant(pos: &components::Position) -> Quadrant {
     if pos.x < crate::SCREEN_WIDTH as f64 / 2.0 {
         if pos.y < crate::SCREEN_HEIGHT as f64 / 2.0 {
             //println!("Player is Top left");
