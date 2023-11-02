@@ -29,28 +29,32 @@ I learned early on in this project that having the texture creator create new in
 call is incredibly heavy. This was the very reason for the texture manager. Before the texture manager the program
 would slow down significantly, even unplayable levels, whenever more than two textures were being drawn every frame.
 
-
-## Optional reading / Stuff I learned and thought was interesting
-
 I assume create_texture_from_surface() works similarly to create_texture(), and I would be wise to find a solution
 where I don't call this every render call. This will be my first fix. The function is used for drawing text on
 the screen, so a simple solution would be just to remove text. However my goal is to keep the program itself as
 close to the first implementation as possible, at least the user experience of it, so I will try to optimise this
 instead of simply deleting the feature.
 
+
+## Optional reading / Stuff I learned and thought was interesting
+
+### Managing text on screen
+
+I have tried creating one single texture out of all text surfaces but making a single texture out of all of these requires
+that the one texture gets drawn in one rect, which screws with the scaling of the individual ones, and can't be re-scaled.
+
 I have tried keeping instances of textures in a hashmap, updating them every 100 frames,
 Keeping instances in structs, updating them every 100 frames,
 
 The reason this doesnt work seems to be that the SDL Texture type is owned by the canvas or texture creator that
 created it, and since the texture creator that creates this only exists in the function scope, the Textures cannot be
-moved to a vector, hashmap or struct outside of the function. What I ended up having to do is to create and store my UI
-elements not in the render function, but in a scope where I have access to my original texture creator, so in main(). 
-I then pass the vector of (texture, rects) into my render function.
+moved to a vector, hashmap or struct outside of the function. 
 
-I have tried creating one single texture out of all text surfaces but making a single texture out of all of these requires
-that the one texture gets drawn in one rect, which screws with the scaling of the individual ones, and can't be re-scaled.
+What I ended up having to do is to create and store my UI elements not in the render function, but in a scope where
+I have access to my original texture creator, so in main(). I then pass the vector of (texture, rects) into my 
+render function.
 
-###Object pooling
+### Object pooling
 
 There is a branch in the repo called object pooling which is my first attempt at implementing pooling for the asteroids. 
 I definitely think it's doable, but I think I started working on it a bit too late. I also realized after reading in to 
