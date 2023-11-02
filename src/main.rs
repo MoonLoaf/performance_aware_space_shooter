@@ -3,7 +3,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{WindowCanvas, Texture};
-use specs::{World, WorldExt, Join, DispatcherBuilder};
+use specs::{World, WorldExt, Join, DispatcherBuilder, Entity};
 
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -17,8 +17,8 @@ pub mod asteroid;
 pub mod laser;
 pub mod texture_manager;
 
-const SCREEN_WIDTH: u32 = 1920;
-const SCREEN_HEIGHT: u32 = 1080;
+const SCREEN_WIDTH: u32 = 800;
+const SCREEN_HEIGHT: u32 = 560;
 
 struct State { ecs: World }
 
@@ -30,13 +30,18 @@ struct TextureRectTuple<'a> {
 #[derive(Default)]
 pub struct DeltaTime(f64);
 
+#[derive(Default)]
+pub struct AsteroidPool {
+    pub asteroids: Vec<Entity>
+}
+
 fn main() -> Result<(), String> {
     //println!("Starting");
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
-    let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1920, 1080)
+    let window = video_subsystem.window("Space Shooter | Oskar Wistedt", SCREEN_WIDTH, SCREEN_HEIGHT)
     .position_centered()
         //.fullscreen()
         .build()
@@ -77,6 +82,8 @@ fn main() -> Result<(), String> {
 
     game_state.ecs.insert(DeltaTime(0.0));
 
+    game_state.ecs.insert(AsteroidPool::new());
+
     let mut frame_count = 0u64;
     let mut last_frame_time = Instant::now();
     let mut last_frame_time_fps = Instant::now();
@@ -85,7 +92,6 @@ fn main() -> Result<(), String> {
     //init at 100 to draw initial UI
     let mut loop_count = 100;
 
-    //let mut ui_textures = initialize_ui(&texture_creator, &font)?;
     let mut ui_textures: Vec<TextureRectTuple> = Vec::new();
 
     'running:loop {
@@ -289,4 +295,29 @@ fn render (canvas: &mut WindowCanvas, texture_manager: &mut TextureManager, ecs:
     }
     canvas.present();
     Ok(())
+}
+
+impl AsteroidPool {
+    pub fn new() -> Self {
+        let asteroids = Vec::new();
+        AsteroidPool { asteroids }
+    }
+}
+
+impl AsteroidPool {
+    pub fn get_asteroid(&mut self) -> Option<Entity> {
+        self.asteroids.pop()
+    }
+}
+
+impl AsteroidPool {
+    pub fn return_asteroid(&mut self, asteroid: Entity) {
+        self.asteroids.push(asteroid);
+    }
+}
+
+impl AsteroidPool {
+    pub fn clear(&mut self) {
+        self.asteroids.clear();
+    }
 }

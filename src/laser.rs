@@ -1,7 +1,7 @@
 use specs::prelude::*;
 use specs::{Entities, Join};
 
-use crate::{components};
+use crate::{AsteroidPool, components};
 
 pub struct LaserMovement;
 
@@ -40,30 +40,30 @@ impl<'a> System<'a> for LaserDamage {
         WriteStorage<'a, components::Laser>,
         WriteStorage<'a, components::Asteroid>,
         WriteStorage<'a, components::GameData>,
+        Write<'a, AsteroidPool>,
         Entities<'a>
     );
     fn run (&mut self, data: Self::SystemData) {
-        let (positions, renderables, lasers, asteroids, _ ,  entities) = &data;
+        let (positions, renderables, lasers, asteroids, _ , mut asteroid_pool,  entities) = data;
 
         let mut should_add_score = false;
 
-        for (laser_pos,_ ,_, laser_entity) in (positions, renderables, lasers, entities).join() {
-            for (asteroid_pos, asteroid_renderable, _, asteroid_entity) in (positions, renderables, asteroids, entities).join() {
+        for (laser_pos,_ ,_, laser_entity) in (&positions, &renderables, &lasers, &entities).join() {
+            for (asteroid_pos, asteroid_renderable, _, asteroid_entity) in (&positions, &renderables, &asteroids, &entities).join() {
                 let diff_x: f64 = (laser_pos.x - asteroid_pos.x).abs();
                 let diff_y: f64 = (laser_pos.y - asteroid_pos.y).abs();
 
                 let hypotenuse: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
 
                 if hypotenuse < asteroid_renderable.output_width as f64 / 2.0 {
-                    //TODO more pooling?
                     entities.delete(laser_entity).ok();
-                    entities.delete(asteroid_entity).ok();
+                    asteroid_pool.return_asteroid(asteroid_entity);
                     should_add_score = true;
                 }
             }
         }
         if should_add_score {
-            let (_, _, _, _, mut gamedatas, _) = data;
+            let (_, _, _, _, mut gamedatas, _, _) = data;
             for gamedata in (&mut gamedatas).join() {
                 gamedata.score += 10 * gamedata.level;
             }

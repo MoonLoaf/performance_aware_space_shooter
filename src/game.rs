@@ -3,12 +3,13 @@ use specs::{World, WorldExt, Builder, Join};
 use vector2d::Vector2D;
 use rand::Rng;
 
-use crate::{components};
+use crate::{AsteroidPool, components};
 use crate::components::GameData;
 use crate::components::Quadrant;
 use crate::input_manager;
 
 const PLAYER_MAX_HEALTH: i32 = 10;
+
 pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_time: f64) {
     reload_world_if_no_players(ecs);
 
@@ -25,7 +26,7 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
     {
         let asteroid_count;
         {
-            let asteroids = ecs.read_storage::<crate::components::Asteroid>();
+            let asteroids = ecs.read_storage::<components::Asteroid>();
             asteroid_count = asteroids.join().count();
         }
         if asteroid_count < 1 {
@@ -241,33 +242,72 @@ fn spawn_asteroids(ecs: &mut World, player_pos: &components::Position, forced: b
    }
 }
 
-fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_size: u32, asteroid_speed: f64, asteroid_rotation_speed: f64){
-    // Calculate adjusted position to keep the entire asteroid within the screen bounds
-    let half_size = asteroid_size as f64 / 2.0;
-    let adjusted_x = position.x.max(half_size).min(crate::SCREEN_WIDTH as f64 - half_size);
-    let adjusted_y = position.y.max(half_size).min(crate::SCREEN_HEIGHT as f64 - half_size);
+pub fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_size: u32, asteroid_speed: f64, asteroid_rotation_speed: f64) {
 
-    ecs.create_entity()
-        .with(components::Position {
+    let mut asteroid_pool = ecs.write_resource::<AsteroidPool>();
+
+    if let Some(asteroid) = asteroid_pool.get_asteroid() {
+        // Modify the components of the recycled asteroid
+        let half_size = asteroid_size as f64 / 2.0;
+        let adjusted_x = position.x.max(half_size).min(crate::SCREEN_WIDTH as f64 - half_size);
+        let adjusted_y = position.y.max(half_size).min(crate::SCREEN_HEIGHT as f64 - half_size);
+
+        ecs.write_storage::<components::Position>().insert(asteroid, components::Position {
             x: adjusted_x,
             y: adjusted_y,
             rot: position.rot,
-        })
-        .with(components::Renderable {
+        }).unwrap();
+
+        ecs.write_storage::<components::Renderable>().insert(asteroid, components::Renderable {
             texture_name: String::from(get_random_asteroid_texture_name()),
             img_width: 215,
             img_height: 215,
             output_width: asteroid_size,
             output_height: asteroid_size,
             img_rotation: 0.0
-        })
-        .with(components::Asteroid{
+        }).unwrap();
+
+        ecs.write_storage::<components::Asteroid>().insert(asteroid, components::Asteroid {
             rotation_speed: asteroid_rotation_speed,
             speed: asteroid_speed,
             friction: 1.0,
             quadrant: get_current_quadrant(&position)
-        })
-    .build();
+        }).unwrap();
+
+    } else {
+        //need to drop this until the ecs is finished creating an entity
+        drop(asteroid_pool);
+
+        // If no asteroid is available from the pool, create a new one
+        let half_size = asteroid_size as f64 / 2.0;
+        let adjusted_x = position.x.max(half_size).min(crate::SCREEN_WIDTH as f64 - half_size);
+        let adjusted_y = position.y.max(half_size).min(crate::SCREEN_HEIGHT as f64 - half_size);
+
+        let entity = ecs.create_entity()
+            .with(components::Position {
+                x: adjusted_x,
+                y: adjusted_y,
+                rot: position.rot,
+            })
+            .with(components::Renderable {
+                texture_name: String::from(get_random_asteroid_texture_name()),
+                img_width: 215,
+                img_height: 215,
+                output_width: asteroid_size,
+                output_height: asteroid_size,
+                img_rotation: 0.0
+            })
+            .with(components::Asteroid{
+                rotation_speed: asteroid_rotation_speed,
+                speed: asteroid_speed,
+                friction: 1.0,
+                quadrant: get_current_quadrant(&position)
+            })
+            .build();
+
+        let mut asteroid_pool = ecs.write_resource::<AsteroidPool>();
+        asteroid_pool.asteroids.push(entity);
+    }
 }
 
 fn generate_spawn_position(player_pos: &components::Position) -> components::Position {
@@ -379,6 +419,7 @@ fn reload_world_if_no_players(ecs: &mut World) {
     }
     if must_reload_world {
         ecs.delete_all();
+        ecs.write_resource::<AsteroidPool>().clear();
         load_world(ecs);
     }
 }
