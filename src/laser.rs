@@ -55,7 +55,6 @@ impl<'a> System<'a> for LaserDamage {
                 let hypotenuse: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
 
                 if hypotenuse < asteroid_renderable.output_width as f64 / 2.0 {
-                    //TODO more pooling?
                     entities.delete(laser_entity).ok();
                     entities.delete(asteroid_entity).ok();
                     should_add_score = true;

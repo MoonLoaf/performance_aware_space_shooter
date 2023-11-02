@@ -38,7 +38,7 @@ fn main() -> Result<(), String> {
 
     let window = video_subsystem.window("Space Shooter | Oskar Wistedt", 1920, 1080)
     .position_centered()
-        //.fullscreen()
+        .fullscreen()
         .build()
         .expect("Could not init video subsystem");
 
@@ -85,7 +85,6 @@ fn main() -> Result<(), String> {
     //init at 100 to draw initial UI
     let mut loop_count = 100;
 
-    //let mut ui_textures = initialize_ui(&texture_creator, &font)?;
     let mut ui_textures: Vec<TextureRectTuple> = Vec::new();
 
     'running:loop {

@@ -14,8 +14,8 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
 
     let mut current_player_pos = components::Position { x: 0.0, y: 0.0, rot: 0.0 };
     {
-        let players = ecs.read_storage::<crate::components::Player>();
-        let positions = ecs.read_storage::<crate::components::Position>();
+        let players = ecs.read_storage::<components::Player>();
+        let positions = ecs.read_storage::<components::Position>();
 
         for (pos, _) in (&positions, &players).join() {
             current_player_pos.x = pos.x;
@@ -100,7 +100,6 @@ pub fn update(ecs: &mut World, input_manager: &mut HashMap<String, bool>, delta_
         let mut gamedata = ecs.write_storage::<GameData>();
         for data in (&mut gamedata).join() {
             data.invincible_player = !data.invincible_player;
-            //println!("invincible_player: {}", data.invincible_player);
         }
     }
     //spawning 1000 asteroids
@@ -123,7 +122,7 @@ pub fn update_movement(pos: &mut components::Position, player: &mut components::
     pos.x += player.current_speed.x * delta_time;
     pos.y -= player.current_speed.y * delta_time;
 
-    player.impulse = vector2d::Vector2D::new(0.0, 0.0);
+    player.impulse = Vector2D::new(0.0, 0.0);
 }
 
 pub fn load_world( ecs: &mut World) {
