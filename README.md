@@ -1,7 +1,5 @@
 # performance_aware_space_shooter
 
--How the implementation makes efficient use of computer hardware
-
 ## Written Assignment
 
 I decided to make this assignment in Rust using SDL2 and specs. I have some previous (very limited) experience with rust
