@@ -22,6 +22,8 @@ over data that is collections of component based on structs and dealing with the
 that make the game interactable. I think this makes systems quite readable, and easy to work with. It also makes the systems 
 limited to only the data required to make them work, instead of references to entire complex objects.
 
+### Profiling
+
 Using a the profiler in VS on the naive implementation of the game I decide to work iteratively. All profiling was done by
 attaching the VS profiler to the process started by running "cargo run", and not an exe.
 
@@ -56,6 +58,11 @@ where I don't call this every render call. This will be my first fix. The functi
 the screen, so a simple solution would be just to remove text. However my goal is to keep the program itself as
 close to the first implementation as possible, at least the user experience of it, so I will try to optimise this
 instead of simply deleting the feature.
+
+I had some issues creating a system for this that worked properly, the process of which can be read about further down, but what I finally
+ended up with was a system that updated my UI every 100 frames with new textures and kept these in a Struct which were rendered every frame.
+this was a huge performance boost that was clearly visible in the profiler and simply by looking at my fps counter, which had gone from about
+600 to 4000 during normal gameplay. This optimization didnt have any effect on the scalability of the game itself though.
 
 I also wanted to try to optimize my colission handling. My first implementation was simply doing some math operations to check overlaps
 for every asteroid in the game. These systems are handled by the dispatcher and because of this I coould not inspect the specific
