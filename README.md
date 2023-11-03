@@ -31,11 +31,11 @@ Starting out with checking heaviest functions. Main culprits are obviously main 
 main referring to the game loop which deals with all runtime logic of the game, including:
 render
 updating movement
-checking collisions and all other events
+checking collisions and all other events.
 
-game update seems surprisingly performant already, probably because of the lightweight nature of the program
+game update seems surprisingly performant already, probably because of the lightweight nature of the program.
 
-Looking further into render I can see the functions that eat the most performance
+Looking further into render I can see the functions that eat the most performance:
 create_texture_from_surface()
 TextureManager::get_texture()
 
